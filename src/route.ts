@@ -9,6 +9,9 @@ import { createCommand } from "./controllers/whisper";
 import whisper from "./services/whisper-shell";
 import { IncomingForm } from "formidable";
 import InternalServerError from "./errors/InternalServerError";
+import agenda from "./agenda/agendaSingleton";
+import { JobHandler } from "./agenda/handler";
+import { schedule } from "./agenda/scheduler";
 
 const router = Router();
 
@@ -22,7 +25,7 @@ function getAbsolutePath(relativePath: string): string {
   return path.resolve(process.cwd(), relativePath);
 }
 
-const uploadFolder = path.join(__dirname, "..", "uploads");
+const uploadFolder = path.join(__dirname, "uploads");
 
 router.post("/transcribe", async (req, res, next) => {
   let outputFilePath = "";
@@ -52,6 +55,9 @@ router.post("/transcribe", async (req, res, next) => {
       const file = files.audio[0];
       const fileExtension = path.extname(file.filepath);
       newFileName = `${Date.now()}${fileExtension}`;
+      if (!fs.existsSync(uploadFolder)) {
+        fs.mkdirSync(uploadFolder, { recursive: true });
+      }
       const newFilePath = path.join(uploadFolder, newFileName);
       fs.renameSync(file.filepath, newFilePath);
 
@@ -85,9 +91,11 @@ router.post("/transcribe", async (req, res, next) => {
         res.write(chunk);
       });
 
-      stream.on("end", () => {
+      stream.on("end", async () => {
         res.write(JSON.stringify({ id: newFileName }));
         res.end();
+        await schedule.deleteFileAfterExpire({ fileName: newFileName });
+        console.log("Scheduling delete-file job");
       });
 
       stream.on("error", (error) => {
@@ -98,6 +106,8 @@ router.post("/transcribe", async (req, res, next) => {
     console.error(error);
     next(error);
   } finally {
+    console.log("Deleting files");
+
     if (outputFilePath) {
       fs.unlinkSync(outputFilePath);
     }

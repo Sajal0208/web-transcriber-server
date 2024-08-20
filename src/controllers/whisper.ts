@@ -38,13 +38,7 @@ const modelPathOrName = (mn: string, mp: string) => {
       context: { modelName: mn, modelPath: mp },
     });
   } else if (!mn && !mp) {
-    const modelPath = path.join(
-      __dirname,
-      "..",
-      "..",
-      "models",
-      MODEL_OBJECT[mn]
-    );
+    const modelPath = path.join(__dirname, "..", "models", MODEL_OBJECT[mn]);
 
     if (!existsSync(modelPath)) {
       throw new NotFoundError({
@@ -56,13 +50,7 @@ const modelPathOrName = (mn: string, mp: string) => {
     return modelPath;
   } else if (mp) return mp;
   else if (MODEL_OBJECT[mn]) {
-    const modelPath = path.join(
-      __dirname,
-      "..",
-      "..",
-      "models",
-      MODEL_OBJECT[mn]
-    );
+    const modelPath = path.join(__dirname, "..", "models", MODEL_OBJECT[mn]);
 
     if (!existsSync(modelPath)) {
       throw new NotFoundError({
